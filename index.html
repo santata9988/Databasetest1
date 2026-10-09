@@ -1,0 +1,410 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>สุ่มข้อสอบ ER Gym</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: four concentric number rings (outer = tier 1) with one fixed pointer at 12 o'clock, a hub button, then four result cards */
+:root {
+  --bg: #eef1f4;
+  --surface: #ffffff;
+  --fg: #14202b;
+  --muted: #5a6978;
+  --line: #d3dae1;
+  --accent: #0a6b73;
+  --accent-fg: #ffffff;
+  --accent-soft: #d9eef0;
+  --code-bg: #e6ebf0;
+  --on-cat: #ffffff;
+  --c-read: #0a6b73;
+  --c-why: #7a4fb5;
+  --c-what: #b5651d;
+  --c-cmp: #2d6cc0;
+  --c-trace: #3a8a3f;
+  --c-sum: #b23a5b;
+  --font-body: "IBM Plex Sans Thai", "Noto Sans Thai", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e151b;
+    --surface: #17212a;
+    --fg: #e6edf3;
+    --muted: #93a3b3;
+    --line: #2a3745;
+    --accent: #4cc3cc;
+    --accent-fg: #07262a;
+    --accent-soft: #14343a;
+    --code-bg: #223040;
+    --on-cat: #08121a;
+    --c-read: #4cc3cc;
+    --c-why: #b99af0;
+    --c-what: #e8a063;
+    --c-cmp: #7fb0f0;
+    --c-trace: #84cf88;
+    --c-sum: #ef8aa6;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e151b;
+  --surface: #17212a;
+  --fg: #e6edf3;
+  --muted: #93a3b3;
+  --line: #2a3745;
+  --accent: #4cc3cc;
+  --accent-fg: #07262a;
+  --accent-soft: #14343a;
+  --code-bg: #223040;
+  --on-cat: #08121a;
+  --c-read: #4cc3cc;
+  --c-why: #b99af0;
+  --c-what: #e8a063;
+  --c-cmp: #7fb0f0;
+  --c-trace: #84cf88;
+  --c-sum: #ef8aa6;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.7;
+  padding-inline: 16px;
+  padding-block: 32px 56px;
+}
+.wrap { max-width: 720px; margin-inline: auto; display: flex; flex-direction: column; gap: 22px; }
+
+header { display: flex; flex-direction: column; gap: 6px; }
+.kicker { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 0; font-size: clamp(26px, 5vw, 34px); line-height: 1.25; font-weight: 700; text-wrap: balance; }
+.sub { margin: 0; color: var(--muted); }
+
+.wheel-box { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+svg.wheel { width: 100%; max-width: 520px; height: auto; display: block; overflow: visible; }
+svg.wheel .hub { cursor: pointer; }
+svg.wheel .hub circle { fill: var(--accent); }
+svg.wheel .hub text { fill: var(--accent-fg); font-family: var(--font-body); font-weight: 700; font-size: 17px; }
+svg.wheel .num { fill: var(--on-cat); font-family: var(--font-mono); font-weight: 600; text-anchor: middle; dominant-baseline: central; }
+svg.wheel .win { fill: none; stroke: var(--fg); stroke-width: 3; stroke-linejoin: round; }
+svg.wheel .ptr { fill: var(--fg); }
+svg.wheel .tier { fill: var(--muted); font-family: var(--font-mono); font-size: 11px; text-anchor: start; dominant-baseline: central; }
+
+button { font: inherit; cursor: pointer; border-radius: 8px; min-height: 44px; padding-inline: 18px; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+button:disabled { opacity: 0.55; cursor: not-allowed; }
+.primary { background: var(--accent); color: var(--accent-fg); border: 0; font-weight: 600; min-width: 190px; }
+.primary:not(:disabled):hover { filter: brightness(1.08); }
+.controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 20px; }
+.toggle { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
+.toggle input { width: 18px; height: 18px; accent-color: var(--accent); }
+.status { font-family: var(--font-mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; text-align: center; }
+
+.legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; font-size: 12.5px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 2px; background: var(--cat); display: inline-block; }
+
+ol.cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 16px 20px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 16px;
+}
+.card.pop { animation: rise 0.4s ease both; }
+@keyframes rise { from { opacity: 0.001; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .card.pop { animation: none; } }
+
+.slot { font-family: var(--font-mono); font-size: 13px; color: var(--muted); padding-top: 5px; grid-row: span 3; white-space: nowrap; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.tag { font-size: 13px; font-weight: 600; color: var(--cat); display: inline-flex; align-items: center; gap: 6px; }
+.tag::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--cat); }
+.qid { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.q { margin: 0; font-size: 18px; line-height: 1.65; font-weight: 500; overflow-wrap: anywhere; }
+.q.wait { color: var(--muted); font-weight: 400; }
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--code-bg); padding: 1px 6px; border-radius: 4px; }
+.swap {
+  justify-self: start; margin-top: 6px; min-height: 36px; padding-inline: 12px; font-size: 13px;
+  background: transparent; color: var(--accent); border: 1px solid var(--line);
+}
+.swap:not(:disabled):hover { border-color: var(--accent); background: var(--accent-soft); }
+
+footer { color: var(--muted); font-size: 13px; text-align: center; }
+
+@media (max-width: 480px) {
+  .card { padding: 14px 16px; gap: 4px 12px; }
+  .q { font-size: 17px; }
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="kicker">ER Diagram · ระบบยิม</span>
+    <h1>วงล้อสุ่มคำถาม ER</h1>
+    <p class="sub">วงล้อ 4 ชั้น หมุนแต่ละชั้นให้หยุดที่คำถามคนละข้อ รวม 20 ข้อ และไม่มีข้อซ้ำกันเลย</p>
+  </header>
+
+  <div class="wheel-box">
+    <svg class="wheel" id="wheel" viewBox="0 0 520 540" role="img" aria-label="วงล้อ 4 ชั้นสำหรับสุ่มคำถาม ER"></svg>
+    <div class="legend" id="legend"></div>
+    <div class="controls">
+      <button class="primary" id="spin" type="button">หมุนวงล้อ</button>
+      <label class="toggle" for="fresh"><input type="checkbox" id="fresh" checked> ไม่ซ้ำกับรอบก่อนหน้า</label>
+    </div>
+    <div class="status" id="status" aria-live="polite"></div>
+  </div>
+
+  <ol class="cards" id="cards" aria-live="polite"></ol>
+
+  <footer>กด “หมุนชั้นนี้ใหม่” เพื่อหมุนเฉพาะชั้นเดียว ผลที่ได้จะไม่ซ้ำกับอีก 3 ชั้นที่เหลือ</footer>
+</div>
+
+<script>
+(function () {
+  var CATS = {
+    read:  { name: "ชี้ตรง ๆ จากไดอะแกรม", color: "var(--c-read)" },
+    why:   { name: "อธิบายเหตุผลการออกแบบ", color: "var(--c-why)" },
+    what:  { name: "ตั้งสถานการณ์สมมติ", color: "var(--c-what)" },
+    cmp:   { name: "เทียบสองตาราง/สองแนวคิด", color: "var(--c-cmp)" },
+    trace: { name: "ตามรอยข้อมูล / เส้นทาง query", color: "var(--c-trace)" },
+    sum:   { name: "ภาพรวม/สังเคราะห์", color: "var(--c-sum)" }
+  };
+
+  var Q = [
+    ["read", "PK ของตาราง `booking` คือคอลัมน์ไหน ทำไมถึงเลือกคอลัมน์นั้น"],
+    ["read", "`gym_class` มี FK กี่ตัว ชี้ไปที่ตารางอะไรบ้าง"],
+    ["read", "คอลัมน์ไหนในทั้งระบบที่เป็น Foreign Key บ้าง (ให้ไล่ชี้ทุกจุด)"],
+    ["read", "`equipment` กับ `class_equipment` เชื่อมกันด้วย FK ตัวไหน"],
+    ["why", "ทำไมความสัมพันธ์ `member` กับ `gym_class` ต้องมีตารางกลาง (`booking`) คั่น แทนที่จะต่อ FK ตรง ๆ"],
+    ["why", "ทำไม `trainer_id` ถึงอยู่ในตาราง `gym_class` ไม่ใช่อยู่ในตาราง `trainer`"],
+    ["why", "ทำไม `capacity` ถึงเก็บไว้ที่ `gym_class` ไม่ใช่เก็บไว้ที่ `booking`"],
+    ["why", "ทำไมคอลัมน์ `quantity` ถึงอยู่ในตาราง `class_equipment` ไม่ใช่อยู่ในตาราง `equipment`"],
+    ["why", "ทำไม `status` ในตาราง `booking` ถึงเป็นคอลัมน์แยก ไม่ใช่การลบแถวทิ้งเมื่อยกเลิกการจอง"],
+    ["what", "ถ้าลบสมาชิกคนหนึ่งออกจากตาราง `member` จะกระทบข้อมูลในตารางไหนบ้าง"],
+    ["what", "ถ้าไม่มีตาราง `class_equipment` เลย จะเกิดปัญหาอะไรตอนต้องเก็บว่าคลาสหนึ่งใช้อุปกรณ์หลายชิ้น"],
+    ["what", "สมาชิกคนหนึ่งอยากจองคลาสเดียวกันซ้ำคนละวัน ตาราง `booking` ออกแบบรองรับเรื่องนี้ยังไง"],
+    ["what", "ถ้าจะเพิ่มกติกา “สมาชิก 1 คนจองได้สูงสุด 3 คลาส/สัปดาห์” ควรเก็บเงื่อนไขนี้ไว้ในตารางไหน หรือเป็น logic ที่เช็คตอนเขียนโปรแกรมแทน"],
+    ["what", "ถ้าจะแยก “ห้อง” (room) ออกเป็นตารางต่างหาก แทนที่จะเก็บเป็น column ข้อความใน `gym_class` จะได้ประโยชน์อะไรเพิ่ม"],
+    ["cmp", "เทียบ `booking` กับ `class_equipment` ว่าทำหน้าที่คล้ายกันตรงไหน (ตารางกลางของ M:N ทั้งคู่) ต่างกันตรงไหน"],
+    ["cmp", "อธิบายความต่างระหว่างความสัมพันธ์ 1:M กับ M:N โดยยกตัวอย่างจากระบบนี้คนละ 1 คู่"],
+    ["trace", "ถ้าอยากรู้ว่าสมาชิกคนหนึ่งเคยจองคลาสอะไรมาบ้างทั้งหมด ต้องเริ่มดูจากตารางไหน เชื่อมผ่านตารางไหนบ้าง"],
+    ["trace", "ถ้าอยากรู้ว่า “เทรนเนอร์คนไหนยังไม่เคยสอนคลาสเลย” ต้องมองจากความสัมพันธ์ไหนของ ER"],
+    ["sum", "ให้อธิบาย ER ทั้งระบบด้วยคำพูดตัวเองภายใน 1 นาที ว่าใครจองอะไร ใครสอนอะไร ใช้อุปกรณ์อะไรบ้าง"],
+    ["sum", "`package_type` ในตาราง `member` เก็บเป็นข้อมูลประเภทไหน (ข้อความ/ตัวเลข) ทำไมถึงเลือกแบบนั้น"]
+  ];
+
+  var N = Q.length, SEG = 360 / N;
+  var CX = 260, CY = 285;
+  var RINGS = [[205, 250], [158, 200], [111, 153], [64, 106]];
+  var FONT = [14, 13, 12.5, 11.5];
+  var DIRS = [1, -1, 1, -1];
+  var SPINS = [3, 4, 5, 6];
+  var DURS = [2800, 3600, 4400, 5200];
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var svg = document.getElementById("wheel");
+  var cardsEl = document.getElementById("cards");
+  var statusEl = document.getElementById("status");
+  var spinBtn = document.getElementById("spin");
+  var freshEl = document.getElementById("fresh");
+
+  var current = [0, 0, 0, 0];   // question index per ring
+  var rot = [0, 0, 0, 0];       // ring rotation in degrees
+  var spinning = [false, false, false, false];
+  var seen = {};
+  var prevDraw = [];
+  var round = 0;
+  var busy = false;
+
+  function rand(n) {
+    try { var a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n; }
+    catch (e) { return Math.floor(Math.random() * n); }
+  }
+  function shuffle(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) { var j = rand(i + 1), t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+  function all() { var r = []; for (var i = 0; i < N; i++) r.push(i); return r; }
+  function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function fmt(s) { return esc(s).replace(/`([^`]+)`/g, "<code>$1</code>"); }
+  function pt(r, deg) { var a = deg * Math.PI / 180; return [CX + r * Math.sin(a), CY - r * Math.cos(a)]; }
+  function f(n) { return n.toFixed(2); }
+  function sector(r0, r1, a0, a1) {
+    var p1 = pt(r1, a0), p2 = pt(r1, a1), p3 = pt(r0, a1), p4 = pt(r0, a0);
+    return "M" + f(p1[0]) + " " + f(p1[1]) + "A" + r1 + " " + r1 + " 0 0 1 " + f(p2[0]) + " " + f(p2[1]) +
+      "L" + f(p3[0]) + " " + f(p3[1]) + "A" + r0 + " " + r0 + " 0 0 0 " + f(p4[0]) + " " + f(p4[1]) + "Z";
+  }
+
+  /* ---------- build the wheel ---------- */
+  function buildWheel() {
+    var h = "";
+    RINGS.forEach(function (rg, k) {
+      var mid = (rg[0] + rg[1]) / 2;
+      h += '<g class="ring" id="ring' + k + '">';
+      for (var i = 0; i < N; i++) {
+        var a = i * SEG;
+        h += '<path d="' + sector(rg[0], rg[1], a - SEG / 2, a + SEG / 2) + '" style="fill:' + CATS[Q[i][0]].color +
+             '" stroke="var(--bg)" stroke-width="1.5"/>';
+        var p = pt(mid, a);
+        h += '<text class="num" x="' + f(p[0]) + '" y="' + f(p[1]) + '" font-size="' + FONT[k] +
+             '" transform="rotate(' + a + " " + f(p[0]) + " " + f(p[1]) + ')">' + (i + 1) + '</text>';
+      }
+      h += '</g>';
+    });
+    RINGS.forEach(function (rg) {
+      h += '<path class="win" d="' + sector(rg[0], rg[1], -SEG / 2, SEG / 2) + '"/>';
+    });
+    var tip = pt(250, 0);
+    h += '<polygon class="ptr" points="' + (CX - 11) + ',8 ' + (CX + 11) + ',8 ' + CX + ',34"/>';
+    RINGS.forEach(function (rg, k) {
+      var p = pt((rg[0] + rg[1]) / 2, SEG / 2 + 2);
+      h += '<text class="tier" x="' + f(p[0] + 4) + '" y="' + f(p[1] - 3) + '">' + (k + 1) + '</text>';
+    });
+    h += '<g class="hub" id="hub"><circle cx="' + CX + '" cy="' + CY + '" r="52"/>' +
+         '<text x="' + CX + '" y="' + CY + '" text-anchor="middle" dominant-baseline="central">หมุน</text></g>';
+    svg.innerHTML = h;
+    document.getElementById("hub").addEventListener("click", function () { if (!busy) spinAll(); });
+  }
+
+  function applyRot(k) {
+    var g = document.getElementById("ring" + k);
+    g.setAttribute("transform", "rotate(" + rot[k].toFixed(3) + " " + CX + " " + CY + ")");
+  }
+
+  function buildLegend() {
+    var h = "";
+    Object.keys(CATS).forEach(function (key) {
+      h += '<span style="--cat:' + CATS[key].color + '"><i></i>' + CATS[key].name + '</span>';
+    });
+    document.getElementById("legend").innerHTML = h;
+  }
+
+  /* ---------- spinning ---------- */
+  function animate(k, idx, spins, dur) {
+    return new Promise(function (resolve) {
+      var start = rot[k], target = -idx * SEG, dir = DIRS[k], diff;
+      if (dir > 0) diff = (((target - start) % 360) + 360) % 360 + 360 * spins;
+      else diff = -((((start - target) % 360) + 360) % 360 + 360 * spins);
+      var t0 = performance.now();
+      function step(t) {
+        var p = Math.min(1, (t - t0) / dur);
+        var e = 1 - Math.pow(1 - p, 4);
+        rot[k] = start + diff * e;
+        applyRot(k);
+        if (p < 1) requestAnimationFrame(step);
+        else { rot[k] = (((start + diff) % 360) + 360) % 360; applyRot(k); resolve(); }
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  function unseenCount() { return all().filter(function (i) { return !seen[i]; }).length; }
+
+  function pickFour() {
+    var picks;
+    if (freshEl.checked) {
+      var fresh = all().filter(function (i) { return !seen[i]; });
+      if (fresh.length < 4) {
+        seen = {};
+        fresh = all().filter(function (i) { return prevDraw.indexOf(i) === -1; });
+      }
+      picks = shuffle(fresh).slice(0, 4);
+    } else {
+      picks = shuffle(all()).slice(0, 4);
+    }
+    return picks;
+  }
+
+  function setBusy(b) {
+    busy = b;
+    spinBtn.disabled = b;
+    var btns = cardsEl.querySelectorAll(".swap");
+    for (var i = 0; i < btns.length; i++) btns[i].disabled = b;
+  }
+
+  function spinAll() {
+    var picks = pickFour();
+    prevDraw = picks.slice();
+    picks.forEach(function (i) { seen[i] = true; });
+    round++;
+    setBusy(true);
+    for (var k = 0; k < 4; k++) spinning[k] = true;
+    renderCards();
+    var jobs = picks.map(function (idx, k) {
+      var spins = reduce ? 1 : SPINS[k], dur = reduce ? 500 : DURS[k];
+      return animate(k, idx, spins, dur).then(function () {
+        current[k] = idx;
+        spinning[k] = false;
+        renderCards(k);
+      });
+    });
+    Promise.all(jobs).then(function () { setBusy(false); renderStatus(); });
+  }
+
+  function spinOne(k) {
+    var others = current.filter(function (_, j) { return j !== k; });
+    var cands = all().filter(function (i) { return others.indexOf(i) === -1 && i !== current[k]; });
+    if (freshEl.checked) {
+      var f2 = cands.filter(function (i) { return !seen[i]; });
+      if (f2.length) cands = f2;
+    }
+    var pick = cands[rand(cands.length)];
+    seen[pick] = true;
+    setBusy(true);
+    spinning[k] = true;
+    renderCards();
+    animate(k, pick, reduce ? 1 : 3, reduce ? 500 : 3000).then(function () {
+      current[k] = pick;
+      spinning[k] = false;
+      renderCards(k);
+      setBusy(false);
+      renderStatus();
+    });
+  }
+
+  /* ---------- results ---------- */
+  function renderCards(popK) {
+    cardsEl.innerHTML = "";
+    current.forEach(function (idx, k) {
+      var li = document.createElement("li");
+      li.className = "card" + (popK === k ? " pop" : "");
+      var body;
+      if (spinning[k]) {
+        li.style.setProperty("--cat", "var(--muted)");
+        body = '<div class="meta"><span class="tag">กำลังหมุน…</span></div><p class="q wait">รอวงล้อชั้นนี้หยุดก่อน</p>';
+      } else {
+        var item = Q[idx], cat = CATS[item[0]];
+        li.style.setProperty("--cat", cat.color);
+        body = '<div class="meta"><span class="tag">' + cat.name + '</span><span class="qid">ข้อ ' + (idx + 1) + '</span></div>' +
+               '<p class="q">' + fmt(item[1]) + '</p>';
+      }
+      li.innerHTML = '<span class="slot">ชั้น ' + (k + 1) + '</span>' + body +
+        '<button type="button" class="swap" data-k="' + k + '"' + (busy ? " disabled" : "") + '>หมุนชั้นนี้ใหม่</button>';
+      cardsEl.appendChild(li);
+    });
+  }
+  function renderStatus() {
+    statusEl.textContent = "รอบที่ " + round + " · ยังไม่เคยออก " + unseenCount() + "/" + N + " ข้อ";
+  }
+
+  cardsEl.addEventListener("click", function (e) {
+    var b = e.target.closest(".swap");
+    if (b && !busy) spinOne(parseInt(b.getAttribute("data-k"), 10));
+  });
+  spinBtn.addEventListener("click", function () { if (!busy) spinAll(); });
+
+  /* ---------- initial resting state: wheel already landed on 4 unique questions ---------- */
+  buildWheel();
+  buildLegend();
+  var first = pickFour();
+  prevDraw = first.slice();
+  first.forEach(function (idx, k) { current[k] = idx; seen[idx] = true; rot[k] = (((-idx * SEG) % 360) + 360) % 360; applyRot(k); });
+  round = 1;
+  renderCards();
+  renderStatus();
+})();
+</script>
+
+</body></html>
