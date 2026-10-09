@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#090d16">
+<title>สุ่มข้อสอบ ER Gym</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #090d16;
+  --panel: #121929;
+  --panel-2: #192238;
+  --line: #27324b;
+  --line-2: #3a4868;
+  --fg: #eef2fa;
+  --muted: #8f9cb7;
+  --bulb: #ffd166;
+  --bulb-dim: #5b4a1e;
+  --bulb-fg: #2a1d00;
+  --on-cat: #0a0e17;
+  --c-read: #3fd0c9;
+  --c-why: #a98bff;
+  --c-what: #ff7a59;
+  --c-cmp: #5aa2ff;
+  --c-trace: #6fd67a;
+  --c-sum: #ff6f9b;
+  --f-display: "Bai Jamjuree", "IBM Plex Sans Thai", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans Thai", "Noto Sans Thai", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0;
+  background:
+    radial-gradient(1100px 640px at 20% -8%, rgba(60, 96, 170, 0.28), transparent 62%),
+    radial-gradient(900px 600px at 95% 35%, rgba(120, 60, 150, 0.2), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: var(--f-body);
+  font-size: 16px;
+  line-height: 1.7;
+  padding-inline: 16px;
+  padding-block: 28px 64px;
+  position: relative;
+}
+.stage-bg {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask-image: radial-gradient(ellipse at 50% 25%, #000 15%, transparent 75%);
+  mask-image: radial-gradient(ellipse at 50% 25%, #000 15%, transparent 75%);
+}
+.page { position: relative; z-index: 1; max-width: 1120px; margin-inline: auto; display: flex; flex-direction: column; gap: 36px; }
+
+/* header */
+.kicker { font-family: var(--f-mono); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--bulb); }
+h1 { font-family: var(--f-display); font-weight: 700; font-size: clamp(34px, 6.5vw, 62px); line-height: 1.25; margin: 4px 0 6px; letter-spacing: -0.01em; text-wrap: balance; }
+h1 .er { font-family: var(--f-mono); background: var(--bulb); color: var(--bulb-fg); padding: 0 0.2em; border-radius: 4px; font-weight: 600; }
+.sub { margin: 0; color: var(--muted); max-width: 56ch; }
+
+/* main grid */
+.main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; }
+@media (min-width: 980px) {
+  .main { grid-template-columns: minmax(0, 560px) minmax(0, 1fr); gap: 48px; align-items: start; }
+  .stage { position: sticky; top: 20px; }
+}
+
+/* wheel stage */
+.stage { display: flex; flex-direction: column; align-items: center; gap: 18px; min-width: 0; }
+.wheel-wrap { position: relative; width: 100%; max-width: 580px; }
+.wheel-wrap::before {
+  content: ""; position: absolute; inset: 8% 6% 8%; border-radius: 50%; z-index: 0;
+  background: radial-gradient(circle, rgba(255, 209, 102, 0.22), rgba(255, 209, 102, 0) 68%);
+  filter: blur(26px);
+}
+svg.wheel { position: relative; z-index: 1; width: 100%; height: auto; display: block; overflow: visible; }
+canvas.fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
+
+.num { fill: var(--on-cat); font-family: var(--f-mono); font-weight: 600; text-anchor: middle; dominant-baseline: central; }
+.win { fill: none; stroke: #fff; stroke-width: 3; stroke-linejoin: round; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.55)); transition: stroke 0.3s; }
+.win.lit { stroke: var(--bulb); filter: drop-shadow(0 0 9px rgba(255, 209, 102, 0.95)); }
+.ptr-body { fill: var(--bulb); stroke: #2a1d00; stroke-width: 2; stroke-linejoin: round; }
+.ptr-dot { fill: #2a1d00; }
+.hub { cursor: pointer; transform-box: fill-box; transform-origin: center; }
+.hub.invite { animation: hubpulse 1.8s ease-in-out infinite; }
+.hub.off { opacity: 0.55; cursor: not-allowed; animation: none; }
+.hub:focus-visible { outline: none; }
+.hub:focus-visible .hub-face { stroke: #fff; stroke-width: 4; }
+.hubt { fill: #2a1d00; font-family: var(--f-display); font-weight: 700; font-size: 22px; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+
+.led { fill: var(--bulb-dim); }
+.wheel:not(.spinning):not(.flash) .led:nth-child(odd) { animation: tw 2.6s ease-in-out infinite alternate; }
+.wheel:not(.spinning):not(.flash) .led:nth-child(even) { animation: tw 2.6s ease-in-out -1.3s infinite alternate; }
+.wheel.spinning .leds { filter: drop-shadow(0 0 4px rgba(255, 209, 102, 0.75)); }
+.wheel.spinning .led { animation: chase 0.8s linear infinite; animation-delay: calc(var(--i) * -0.02s); }
+.wheel.flash .led { animation: blink 0.3s steps(1) 5; }
+@keyframes tw { from { fill: #6a561f; } to { fill: #c79a2f; } }
+@keyframes chase { 0% { fill: #ffd166; } 22% { fill: #ffd166; } 23% { fill: #5b4a1e; } 100% { fill: #5b4a1e; } }
+@keyframes blink { 0% { fill: #ffd166; } 50% { fill: #5b4a1e; } }
+@keyframes hubpulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+
+/* controls */
+.spin-btn {
+  font-family: var(--f-display); font-weight: 700; font-size: 20px; letter-spacing: 0.02em;
+  min-height: 56px; padding-inline: 40px; border: 0; border-radius: 6px; cursor: pointer;
+  background: var(--bulb); color: var(--bulb-fg);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35), 0 12px 32px -10px rgba(255, 209, 102, 0.7);
+  transition: transform 0.12s, filter 0.12s;
+}
+.spin-btn:not(:disabled):hover { filter: brightness(1.06); transform: translateY(-1px); }
+.spin-btn:not(:disabled):active { transform: translateY(1px); }
+.spin-btn:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
+button:focus-visible, input:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+.opts { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding-inline: 14px;
+  font: 14px/1.2 var(--f-body); color: var(--fg); background: var(--panel); border: 1px solid var(--line-2); border-radius: 6px; cursor: pointer;
+}
+button.chip:not(:disabled):hover { border-color: var(--bulb); }
+button.chip:disabled { opacity: 0.5; cursor: not-allowed; }
+.chip input { width: 17px; height: 17px; accent-color: var(--bulb); margin: 0; }
+
+.legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; font-size: 12.5px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 2px; background: var(--cat); display: inline-block; }
+
+/* side */
+.side { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+.ledger-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font-family: var(--f-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.cells { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; margin-top: 10px; }
+@media (min-width: 560px) { .cells { grid-template-columns: repeat(20, 1fr); gap: 4px; } }
+.cell { aspect-ratio: 1; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 3px; font-family: var(--f-mono); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; transition: background 0.3s, color 0.3s; }
+.cell.seen { border-color: color-mix(in srgb, var(--cat) 55%, transparent); color: var(--cat); background: color-mix(in srgb, var(--cat) 14%, transparent); }
+.cell.now { background: var(--cat); color: var(--on-cat); border-color: var(--bulb); box-shadow: 0 0 0 2px var(--bulb); font-weight: 600; }
+
+ol.cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.card {
+  position: relative; overflow: hidden; isolation: isolate;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+  padding: 18px 20px 16px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 16px;
+}
+.card.pop { animation: drop 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes drop { from { opacity: 0.001; transform: translateY(14px) scale(0.98); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+.tierbox { grid-row: 1 / span 4; display: flex; flex-direction: column; align-items: center; gap: 4px; font-family: var(--f-mono); font-size: 11px; color: var(--muted); letter-spacing: 0.06em; white-space: nowrap; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.tag { font-size: 13px; font-weight: 600; color: var(--cat); }
+.qno { font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
+.q { margin: 0; font-size: 18px; line-height: 1.65; font-weight: 500; overflow-wrap: anywhere; }
+code { font-family: var(--f-mono); font-size: 0.86em; background: var(--panel-2); border: 1px solid var(--line); padding: 1px 6px; border-radius: 4px; }
+.chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
+.chips code { color: var(--bulb); border-color: rgba(255, 209, 102, 0.3); font-size: 12px; }
+.swap { justify-self: start; margin-top: 4px; min-height: 36px; padding-inline: 12px; font: 13px var(--f-body); background: transparent; color: var(--fg); border: 1px solid var(--line-2); border-radius: 6px; cursor: pointer; }
+.swap:not(:disabled):hover { border-color: var(--bulb); color: var(--bulb); }
+.swap:disabled { opacity: 0.5; cursor: not-allowed; }
+.skel { height: 14px; border-radius: 3px; background: linear-gradient(90deg, var(--panel-2) 0%, var(--line-2) 50%, var(--panel-2) 100%); background-size: 200% 100%; animation: shimmer 1.2s linear infinite; }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.wait-label { font-family: var(--f-mono); font-size: 12px; color: var(--bulb); letter-spacing: 0.06em; }
+.hint { text-align: center; color: var(--muted); border: 1px dashed var(--line-2); border-radius: 6px; padding: 28px 18px; }
+
+/* ER map */
+.map { border-top: 1px solid var(--line); padding-top: 28px; display: flex; flex-direction: column; gap: 12px; }
+.map h2 { font-family: var(--f-display); font-size: 24px; margin: 0; line-height: 1.3; }
+.map p { margin: 0; color: var(--muted); font-size: 14px; }
+.map-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.map-scroll { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px; }
+svg.er { display: block; width: 100%; min-width: 640px; height: auto; }
+.tb rect.bx { fill: var(--panel-2); stroke: var(--line-2); stroke-width: 1.5; }
+.tb .hd { fill: #202c47; }
+.tb .tn { fill: var(--fg); font-family: var(--f-mono); font-weight: 600; font-size: 15px; }
+.tb .sep { stroke: var(--line-2); stroke-width: 1; }
+.tb .col { fill: var(--fg); font-family: var(--f-mono); font-size: 13px; }
+.tb .col.k { font-weight: 600; }
+.tb .kk { fill: var(--bulb); font-family: var(--f-mono); font-size: 10.5px; font-weight: 600; text-anchor: end; }
+.tb .cols { filter: none; opacity: 1; }
+.lk { stroke: var(--line-2); stroke-width: 2; fill: none; }
+.cn { fill: var(--muted); font-family: var(--f-mono); font-size: 13px; font-weight: 600; text-anchor: middle; }
+
+/* grading table section */
+.grading-section { border-top: 1px solid var(--line); padding-top: 28px; display: flex; flex-direction: column; gap: 16px; }
+.grading-section h2 { font-family: var(--f-display); font-size: 24px; margin: 0; line-height: 1.3; }
+.grading-table-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px; }
+.grading-table { width: 100%; border-collapse: collapse; text-align: center; font-family: var(--f-mono); font-size: 14px; }
+.grading-table th, .grading-table td { border: 1px solid var(--line-2); padding: 10px; vertical-align: middle; }
+.grading-table th { background: var(--panel-2); color: var(--bulb); font-weight: 600; }
+.grading-table input[type="number"] { width: 70px; background: var(--bg); border: 1px solid var(--line-2); color: var(--fg); text-align: center; padding: 6px; border-radius: 4px; font-family: var(--f-mono); font-size: 15px; }
+.grading-table input[type="number"]:focus { outline: 2px solid var(--bulb); }
+.total-score { font-size: 18px; font-weight: 700; color: var(--bulb); }
+
+footer { color: var(--muted); font-size: 13px; text-align: center; }
+
+@media (max-width: 480px) {
+  .card { padding: 14px 14px 14px; gap: 6px 12px; }
+  .q { font-size: 17px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hub.invite, .skel, .card.pop { animation: none; }
+  .led { animation: none !important; fill: #a98127; }
+}
+</style>
+</head>
+<body>
+
+<div class="stage-bg" aria-hidden="true"></div>
+<div class="page">
+  <header>
+    <span class="kicker">ER Diagram · ระบบจองคลาสยิม</span>
+    <h1>วงล้อสุ่มคำถาม <span class="er">ER</span></h1>
+    <p class="sub">หมุนวงล้อ 4 ชั้น ได้ 4 คำถามที่ไม่ซ้ำกัน เรียงลำดับข้อจากน้อยไปมาก พร้อมระบบประเมินคะแนน</p>
+  </header>
+
+  <div class="main">
+    <section class="stage" aria-label="วงล้อสุ่มคำถาม">
+      <div class="wheel-wrap">
+        <svg class="wheel" id="wheel" viewBox="0 0 580 600" role="img" aria-label="วงล้อ 4 ชั้นสำหรับสุ่มคำถาม ER"></svg>
+        <canvas class="fx" id="fx" aria-hidden="true"></canvas>
+      </div>
+      <button class="spin-btn" id="spin" type="button">หมุนวงล้อ</button>
+      <div class="opts">
+        <label class="chip" for="fresh"><input type="checkbox" id="fresh" checked> ไม่ซ้ำกับรอบก่อนหน้า</label>
+        <button class="chip" id="reset" type="button">ล้างประวัติ</button>
+      </div>
+      <div class="legend" id="legend"></div>
+    </section>
+
+    <section class="side" aria-label="ผลการสุ่ม">
+      <div class="ledger">
+        <div class="ledger-head"><span id="ledgerRound"></span><span id="ledgerCount"></span></div>
+        <div class="cells" id="cells"></div>
+      </div>
+      <ol class="cards" id="cards" aria-live="polite"></ol>
+    </section>
+  </div>
+
+  <section class="map" aria-label="แผนที่ตาราง ER">
+    <div class="map-head">
+      <h2>ไดอะแกรม ER ของระบบ (สำหรับดูอ้างอิง)</h2>
+    </div>
+    <p>แสดงโครงสร้างตารางและคอลัมน์ทั้งหมดของระบบอย่างถาวร เพื่อใช้ศึกษาและดูประกอบการตอบคำถาม เส้นเชื่อมแสดงความสัมพันธ์แบบ 1:M โดย 1 คือฝั่งที่ถูกอ้างอิง และ M คือฝั่งที่เก็บ FK</p>
+    <div class="map-scroll"><svg class="er" id="er" viewBox="0 0 840 580" role="img" aria-label="ไดอะแกรม ER ตาราง member booking gym_class trainer class_equipment equipment"></svg></div>
+  </section>
+
+  <!-- ส่วนตารางประเมินคะแนนโครงงาน -->
+  <section class="grading-section" aria-label="ตารางประเมินคะแนนโครงงาน">
+    <h2>เกณฑ์การประเมินคะแนนโครงงาน</h2>
+    <div class="grading-table-wrap">
+      <table class="grading-table">
+        <thead>
+          <tr>
+            <th colspan="2">ความเข้าใจ (ER และ code) [เต็ม 20]</th>
+            <th colspan="2">ER-diagram [เต็ม 20]</th>
+            <th>การทำงานเว็บ [เต็ม 10]</th>
+            <th>ใช้ AI ช่วย (ใช้เยอะ คะแนนน้อย) [เต็ม 10]</th>
+            <th rowspan="2">คะแนนรวม<br>(เต็ม 60)</th>
+          </tr>
+          <tr>
+            <th>นิสิต 1 (10)</th>
+            <th>นิสิต 2 (10)</th>
+            <th>design ถูกต้อง (10)</th>
+            <th>เพิ่มจาก basic (10)</th>
+            <th>เว็บทำงานได้ (10)</th>
+            <th>ระดับการใช้ AI (10)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><input type="number" id="score_s1" min="0" max="10" value="10"></td>
+            <td><input type="number" id="score_s2" min="0" max="10" value="10"></td>
+            <td><input type="number" id="score_design" min="0" max="10" value="10"></td>
+            <td><input type="number" id="score_basic" min="0" max="10" value="10"></td>
+            <td><input type="number" id="score_web" min="0" max="10" value="10"></td>
+            <td><input type="number" id="score_ai" min="0" max="10" value="10"></td>
+            <td><span id="total_score" class="total-score">60</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>กด “หมุนชั้นนี้ใหม่” ในแต่ละข้อเพื่อหมุนเฉพาะชั้นเดียว ผลที่ได้จะไม่ซ้ำกับอีก 3 ชั้นที่เหลือ</footer>
+</div>
+
+<script>
+(function () {
+  var CATS = {
+    read:  { name: "ชี้ตรง ๆ จากไดอะแกรม", color: "var(--c-read)", hex: "#3fd0c9" },
+    why:   { name: "อธิบายเหตุผลการออกแบบ", color: "var(--c-why)", hex: "#a98bff" },
+    what:  { name: "ตั้งสถานการณ์สมมติ", color: "var(--c-what)", hex: "#ff7a59" },
+    cmp:   { name: "เทียบสองตาราง/สองแนวคิด", color: "var(--c-cmp)", hex: "#5aa2ff" },
+    trace: { name: "ตามรอยข้อมูล / เส้นทาง query", color: "var(--c-trace)", hex: "#6fd67a" },
+    sum:   { name: "ภาพรวม/สังเคราะห์", color: "var(--c-sum)", hex: "#ff6f9b" }
+  };
+  var TB = ["member", "booking", "gym_class", "trainer", "equipment", "class_equipment"];
+
+  var Q = [
+    ["read", "PK ของตาราง `booking` คือคอลัมน์ไหน ทำไมถึงเลือกคอลัมน์นั้น", ["booking"]],
+    ["read", "`gym_class` มี FK กี่ตัว ชี้ไปที่ตารางอะไรบ้าง", ["gym_class"]],
+    ["read", "คอลัมน์ไหนในทั้งระบบที่เป็น Foreign Key บ้าง (ให้ไล่ชี้ทุกจุด)", TB],
+    ["read", "`equipment` กับ `class_equipment` เชื่อมกันด้วย FK ตัวไหน", ["equipment", "class_equipment"]],
+    ["why", "ทำไมความสัมพันธ์ `member` กับ `gym_class` ต้องมีตารางกลาง (`booking`) คั่น แทนที่จะต่อ FK ตรง ๆ", ["member", "gym_class", "booking"]],
+    ["why", "ทำไม `trainer_id` ถึงอยู่ในตาราง `gym_class` ไม่ใช่อยู่ในตาราง `trainer`", ["trainer", "gym_class"]],
+    ["why", "ทำไม `capacity` ถึงเก็บไว้ที่ `gym_class` ไม่ใช่เก็บไว้ที่ `booking`", ["gym_class", "booking"]],
+    ["why", "ทำไมคอลัมน์ `quantity` ถึงอยู่ในตาราง `class_equipment` ไม่ใช่อยู่ในตาราง `equipment`", ["class_equipment", "equipment"]],
+    ["why", "ทำไม `status` ในตาราง `booking` ถึงเป็นคอลัมน์แยก ไม่ใช่การลบแถวทิ้งเมื่อยกเลิกการจอง", ["booking"]],
+    ["what", "ถ้าลบสมาชิกคนหนึ่งออกจากตาราง `member` จะกระทบข้อมูลในตารางไหนบ้าง", ["member"]],
+    ["what", "ถ้าไม่มีตาราง `class_equipment` เลย จะเกิดปัญหาอะไรตอนต้องเก็บว่าคลาสหนึ่งใช้อุปกรณ์หลายชิ้น", ["class_equipment"]],
+    ["what", "สมาชิกคนหนึ่งอยากจองคลาสเดียวกันซ้ำคนละวัน ตาราง `booking` ออกแบบรองรับเรื่องนี้ยังไง", ["booking"]],
+    ["what", "ถ้าจะเพิ่มกติกา “สมาชิก 1 คนจองได้สูงสุด 3 คลาส/สัปดาห์” ควรเก็บเงื่อนไขนี้ไว้ในตารางไหน หรือเป็น logic ที่เช็คตอนเขียนโปรแกรมแทน", ["member", "gym_class"]],
+    ["what", "ถ้าจะแยก “ห้อง” (room) ออกเป็นตารางต่างหาก แทนที่จะเก็บเป็น column ข้อความใน `gym_class` จะได้ประโยชน์อะไรเพิ่ม", ["gym_class"]],
+    ["cmp", "เทียบ `booking` กับ `class_equipment` ว่าทำหน้าที่คล้ายกันตรงไหน (ตารางกลางของ M:N ทั้งคู่) ต่างกันตรงไหน", ["booking", "class_equipment"]],
+    ["cmp", "อธิบายความต่างระหว่างความสัมพันธ์ 1:M กับ M:N โดยยกตัวอย่างจากระบบนี้คนละ 1 คู่", TB],
+    ["trace", "ถ้าอยากรู้ว่าสมาชิกคนหนึ่งเคยจองคลาสอะไรมาบ้างทั้งหมด ต้องเริ่มดูจากตารางไหน เชื่อมผ่านตารางไหนบ้าง", ["member", "gym_class"]],
+    ["trace", "ถ้าอยากรู้ว่า “เทรนเนอร์คนไหนยังไม่เคยสอนคลาสเลย” ต้องมองจากความสัมพันธ์ไหนของ ER", ["trainer"]],
+    ["sum", "ให้อธิบาย ER ทั้งระบบด้วยคำพูดตัวเองภายใน 1 นาที ว่าใครจองอะไร ใครสอนอะไร ใช้อุปกรณ์อะไรบ้าง", TB],
+    ["sum", "`package_type` ในตาราง `member` เก็บเป็นข้อมูลประเภทไหน (ข้อความ/ตัวเลข) ทำไมถึงเลือกแบบนั้น", ["member"]]
+  ];
+
+  var N = Q.length, SEG = 360 / N, LN = 40;
+  var CX = 290, CY = 310;
+  var RINGS = [[208, 254], [160, 202], [112, 154], [64, 106]];
+  var FONT = [16, 15, 14.5, 13.5];
+  var DIRS = [1, -1, 1, -1];
+  var SPINS = [3, 4, 5, 6];
+  var DURS = [2800, 3600, 4400, 5200];
+  var IDLE = [0.05, 0.08, 0.11, 0.14];
+  var reduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+  var svg = document.getElementById("wheel");
+  var cardsEl = document.getElementById("cards");
+  var cellsEl = document.getElementById("cells");
+  var spinBtn = document.getElementById("spin");
+  var freshEl = document.getElementById("fresh");
+  var resetBtn = document.getElementById("reset");
+  var fx = document.getElementById("fx");
+
+  var current = [null, null, null, null];
+  var rot = [0, 0, 0, 0];
+  var lastSeg = [0, 0, 0, 0];
+  var spinning = [false, false, false, false];
+  var seen = {};
+  var revealed = {};
+  var prevDraw = [];
+  var round = 0;
+  var busy = false;
+
+  function rand(n) {
+    try { var a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n; }
+    catch (e) { return Math.floor(Math.random() * n); }
+  }
+  function shuffle(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) { var j = rand(i + 1), t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+  function all() { var r = []; for (var i = 0; i < N; i++) r.push(i); return r; }
+  function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function fmt(s) { return esc(s).replace(/`([^`]+)`/g, "<code>\$1</code>"); }
+  function pt(r, deg) { var a = deg * Math.PI / 180; return [CX + r * Math.sin(a), CY - r * Math.cos(a)]; }
+  function f(n) { return n.toFixed(2); }
+  function sector(r0, r1, a0, a1) {
+    var p1 = pt(r1, a0), p2 = pt(r1, a1), p3 = pt(r0, a1), p4 = pt(r0, a0);
+    return "M" + f(p1[0]) + " " + f(p1[1]) + "A" + r1 + " " + r1 + " 0 0 1 " + f(p2[0]) + " " + f(p2[1]) +
+      "L" + f(p3[0]) + " " + f(p3[1]) + "A" + r0 + " " + r0 + " 0 0 0 " + f(p4[0]) + " " + f(p4[1]) + "Z";
+  }
+  function norm(d) { return ((d % 360) + 360) % 360; }
+  function count(o) { var c = 0; for (var k in o) if (o[k]) c++; return c; }
+
+  var fctx = fx.getContext("2d"), parts = [], fxRun = false;
+  var COLS = ["#3fd0c9", "#a98bff", "#ff7a59", "#5aa2ff", "#6fd67a", "#ff6f9b", "#ffd166"];
+  function sizeFx() {
+    var r = fx.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+    fx.width = Math.max(1, r.width * d); fx.height = Math.max(1, r.height * d);
+    fctx.setTransform(d, 0, 0, d, 0, 0);
+  }
+  function burst(n) {
+    if (reduce) return;
+    sizeFx();
+    var r = fx.getBoundingClientRect();
+    var cx = r.width * CX / 580, cy = r.height * CY / 600;
+    for (var i = 0; i < n; i++) {
+      var a = Math.random() * Math.PI * 2, sp = 4 + Math.random() * 9;
+      parts.push({ x: cx, y: cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 4, w: 5 + Math.random() * 6, h: 3 + Math.random() * 4,
+        rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4, c: COLS[i % COLS.length], life: 1 });
+    }
+    if (!fxRun) { fxRun = true; requestAnimationFrame(fxStep); }
+  }
+  function fxStep() {
+    var r = fx.getBoundingClientRect();
+    fctx.clearRect(0, 0, r.width, r.height);
+    parts = parts.filter(function (p) { return p.life > 0; });
+    parts.forEach(function (p) {
+      p.vy += 0.28; p.vx *= 0.985; p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.life -= 0.011;
+      fctx.save(); fctx.globalAlpha = Math.max(0, Math.min(1, p.life * 1.6));
+      fctx.translate(p.x, p.y); fctx.rotate(p.rot); fctx.fillStyle = p.c; fctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); fctx.restore();
+    });
+    if (parts.length) requestAnimationFrame(fxStep);
+    else { fxRun = false; fctx.clearRect(0, 0, r.width, r.height); }
+  }
+
+  var ptrEl, hubEl;
+  function buildWheel() {
+    var h = '<defs>' +
+      '<linearGradient id="rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a5880"/><stop offset="0.5" stop-color="#1b2338"/><stop offset="1" stop-color="#0d1322"/></linearGradient>' +
+      '<radialGradient id="hubg" cx="0.4" cy="0.35" r="0.8"><stop offset="0" stop-color="#ffeab0"/><stop offset="1" stop-color="#ffbf3a"/></radialGradient>' +
+      '</defs>';
+    h += '<circle cx="' + CX + '" cy="' + CY + '" r="274" fill="url(#rim)"/>';
+    h += '<circle cx="' + CX + '" cy="' + CY + '" r="259" fill="#0b1120" stroke="#2c3856" stroke-width="2"/>';
+    h += '<g class="leds">';
+    for (var i = 0; i < LN; i++) {
+      var p = pt(266.5, i * 360 / LN);
+      h += '<circle class="led" cx="' + f(p[0]) + '" cy="' + f(p[1]) + '" r="4.4" style="--i:' + i + '"/>';
+    }
+    h += '</g>';
+    RINGS.forEach(function (rg, k) {
+      var mid = (rg[0] + rg[1]) / 2;
+      h += '<g id="ring' + k + '">';
+      for (var i = 0; i < N; i++) {
+        var a = i * SEG;
+        h += '<path d="' + sector(rg[0], rg[1], a - SEG / 2, a + SEG / 2) + '" style="fill:' + CATS[Q[i][0]].color + '" stroke="#0b1120" stroke-width="1.5"/>';
+        var p2 = pt(mid, a);
+        h += '<text class="num" x="' + f(p2[0]) + '" y="' + f(p2[1]) + '" font-size="' + FONT[k] + '" transform="rotate(' + a + " " + f(p2[0]) + " " + f(p2[1]) + ')">' + (i + 1) + '</text>';
+      }
+      h += '</g>';
+    });
+    RINGS.forEach(function (rg, k) {
+      h += '<path class="win" id="win' + k + '" d="' + sector(rg[0], rg[1], -SEG / 2, SEG / 2) + '"/>';
+    });
+    h += '<g id="ptr" transform="rotate(0 ' + CX + ' 22)"><path class="ptr-body" d="M' + (CX - 12) + ' 22a12 12 0 0 1 24 0L' + CX + ' 68Z"/><circle class="ptr-dot" cx="' + CX + '" cy="22" r="4"/></g>';
+    h += '<g class="hub invite" id="hub" role="button" tabindex="0" aria-label="หมุนวงล้อ">' +
+         '<circle cx="' + CX + '" cy="' + CY + '" r="60" fill="#0b1120" stroke="#3a4868" stroke-width="2"/>' +
+         '<circle class="hub-face" cx="' + CX + '" cy="' + CY + '" r="54" fill="url(#hubg)"/>' +
+         '<circle cx="' + CX + '" cy="' + CY + '" r="45" fill="none" stroke="#2a1d00" stroke-opacity="0.28" stroke-dasharray="3 5"/>' +
+         '<text class="hubt" x="' + CX + '" y="' + (CY + 1) + '">หมุน</text></g>';
+    svg.innerHTML = h;
+    ptrEl = document.getElementById("ptr");
+    hubEl = document.getElementById("hub");
+    hubEl.addEventListener("click", function () { if (!busy) spinAll(); });
+    hubEl.addEventListener("keydown", function (e) { if ((e.key === "Enter" || e.key === " ") && !busy) { e.preventDefault(); spinAll(); } });
+  }
+  function applyRot(k) {
+    document.getElementById("ring" + k).setAttribute("transform", "rotate(" + rot[k].toFixed(3) + " " + CX + " " + CY + ")");
+  }
+
+  function buildLegend() {
+    var h = "";
+    Object.keys(CATS).forEach(function (key) { h += '<span style="--cat:' + CATS[key].color + '"><i></i>' + CATS[key].name + '</span>'; });
+    document.getElementById("legend").innerHTML = h;
+  }
+
+  var TBL = {
+    member: { x: 300, y: 10, c: [["member_id", "PK"], ["name"], ["gender"], ["join_date"], ["package_type"]] },
+    booking: { x: 20, y: 150, c: [["booking_id", "PK"], ["member_id", "FK"], ["class_id", "FK"], ["book_date"], ["status"]] },
+    gym_class: { x: 300, y: 200, c: [["class_id", "PK"], ["trainer_id", "FK"], ["name"], ["room"], ["capacity"], ["schedule_time"]] },
+    trainer: { x: 620, y: 215, c: [["trainer_id", "PK"], ["name"], ["specialty"], ["phone"]] },
+    class_equipment: { x: 20, y: 410, c: [["class_id", "PK FK"], ["equip_id", "PK FK"], ["quantity"]] },
+    equipment: { x: 300, y: 440, c: [["equip_id", "PK"], ["name"], ["amount"]] }
+  };
+  function buildMap() {
+    var h = '<g>';
+    ["M300 100H260V196H220", "M220 235H300", "M500 260H620", "M220 445H260V335H300", "M300 495H220"].forEach(function (d) {
+      h += '<path class="lk" d="' + d + '"/>';
+    });
+    var C = [[292, 92, "1"], [228, 188, "M"], [292, 227, "1"], [228, 227, "M"], [612, 252, "1"], [508, 252, "M"],
+             [292, 327, "1"], [228, 437, "M"], [292, 487, "1"], [228, 487, "M"]];
+    C.forEach(function (c) { h += '<text class="cn" x="' + c[0] + '" y="' + c[1] + '">' + c[2] + '</text>'; });
+    h += '</g>';
+    TB.forEach(function (t) {
+      var b = TBL[t], x = b.x, y = b.y, w = 200, hgt = 34 + b.c.length * 24 + 8;
+      var pks = b.c.filter(function (r) { return r[1] && r[1].indexOf("PK") === 0; }).length;
+      h += '<g class="tb" data-t="' + t + '"><rect class="bx" x="' + x + '" y="' + y + '" width="' + w + '" height="' + hgt + '" rx="4"/>' +
+        '<path class="hd" d="M' + x + " " + (y + 4) + 'a4 4 0 0 1 4 -4h192a4 4 0 0 1 4 4V' + (y + 34) + 'H' + x + 'Z"/>' +
+        '<text class="tn" x="' + (x + 14) + '" y="' + (y + 22) + '">' + t + '</text>' +
+        '<line class="sep" x1="' + x + '" y1="' + (y + 34) + '" x2="' + (x + w) + '" y2="' + (y + 34) + '"/>' +
+        '<line class="sep" x1="' + x + '" y1="' + (y + 34 + pks * 24) + '" x2="' + (x + w) + '" y2="' + (y + 34 + pks * 24) + '"/><g class="cols">';
+      b.c.forEach(function (r, i) {
+        var ty = y + 34 + i * 24 + 17;
+        h += '<text class="col' + (r[1] ? " k" : "") + '" x="' + (x + 14) + '" y="' + ty + '">' + r[0] + '</text>';
+        if (r[1]) h += '<text class="kk" x="' + (x + w - 12) + '" y="' + ty + '">' + r[1] + '</text>';
+      });
+      h += '</g></g>';
+    });
+    document.getElementById("er").innerHTML = h;
+  }
+
+  function renderLedger() {
+    var now = {};
+    for (var k = 0; k < 4; k++) if (current[k] !== null && !spinning[k]) now[current[k]] = true;
+    var h = "";
+    for (var i = 0; i < N; i++) {
+      var cls = "cell" + (revealed[i] ? " seen" : "") + (now[i] ? " now" : "");
+      h += '<div class="' + cls + '" style="--cat:' + CATS[Q[i][0]].color + '" title="ข้อ ' + (i + 1) + '">' + (i + 1) + '</div>';
+    }
+    cellsEl.innerHTML = h;
+    document.getElementById("ledgerRound").textContent = round === 0 ? "ยังไม่ได้หมุน" : "รอบที่ " + round;
+    document.getElementById("ledgerCount").textContent = "ผ่านการสุ่มแล้ว " + count(revealed) + "/" + N + " ข้อ";
+  }
+
+  function tierIcon(k, color) {
+    var h = '<svg viewBox="0 0 44 44" width="44" height="44" aria-hidden="true">';
+    [19, 14, 9, 4].forEach(function (r, i) {
+      h += '<circle cx="22" cy="22" r="' + r + '" fill="none" stroke-width="4" style="stroke:' + (i === k ? color : "var(--line-2)") + '"/>';
+    });
+    return h + "</svg>";
+  }
+
+  function renderCards(popMap) {
+    cardsEl.innerHTML = "";
+    if (round === 0) {
+      cardsEl.innerHTML = '<li class="hint">กดปุ่ม “หมุนวงล้อ” เพื่อสุ่มคำถาม 4 ข้อ คำถามจะขึ้นเมื่อวงล้อแต่ละชั้นหยุดหมุน</li>';
+      return;
+    }
+    
+    var activeList = [];
+    for (var k = 0; k < 4; k++) {
+      if (current[k] !== null) {
+        activeList.push({ k: k, idx: current[k] });
+      }
+    }
+    activeList.sort(function(a, b) { return a.idx - b.idx; });
+
+    activeList.forEach(function (itemInfo) {
+      var k = itemInfo.k, idx = itemInfo.idx;
+      var li = document.createElement("li");
+      var dis = busy ? " disabled" : "";
+      
+      if (spinning[k]) {
+        li.className = "card";
+        li.style.setProperty("--cat", "var(--muted)");
+        li.innerHTML = '<div class="tierbox">' + tierIcon(k, "var(--bulb)") + '<span>ชั้น ' + (k + 1) + '</span></div>' +
+          '<div class="meta"><span class="wait-label">กำลังหมุน…</span></div>' +
+          '<div class="skel" style="width:88%"></div><div class="skel" style="width:56%"></div>';
+      } else {
+        var item = Q[idx], cat = CATS[item[0]];
+        li.className = "card" + (popMap && popMap[k] ? " pop" : "");
+        li.style.setProperty("--cat", cat.color);
+        var chips = item[2].length === TB.length ? '<code>ทั้งระบบ</code>' : item[2].map(function (t) { return "<code>" + t + "</code>"; }).join("");
+        li.innerHTML = '<div class="tierbox">' + tierIcon(k, cat.color) + '<span>ชั้น ' + (k + 1) + '</span></div>' +
+          '<div class="meta"><span class="tag">' + cat.name + '</span><span class="qno">ข้อ ' + (idx + 1) + '</span></div>' +
+          '<p class="q">' + fmt(item[1]) + '</p>' +
+          '<div class="chips"><span>ตารางในโจทย์</span>' + chips + '</div>' +
+          '<button type="button" class="swap" data-k="' + k + '"' + dis + '>หมุนชั้นนี้ใหม่</button>';
+      }
+      cardsEl.appendChild(li);
+    });
+  }
+  function renderAll() { renderCards(); renderLedger(); }
+
+  var kick = 0, flapRun = false;
+  function kickFlap() { if (reduce) return; kick = 1; if (!flapRun) { flapRun = true; requestAnimationFrame(flapStep); } }
+  function flapStep() {
+    kick *= 0.84;
+    ptrEl.setAttribute("transform", "rotate(" + (-kick * 26).toFixed(2) + " " + CX + " 22)");
+    if (kick > 0.01) requestAnimationFrame(flapStep);
+    else { kick = 0; ptrEl.setAttribute("transform", "rotate(0 " + CX + " 22)"); flapRun = false; }
+  }
+  var idleRun = false;
+  function idleLoop() {
+    if (reduce || idleRun) return;
+    idleRun = true;
+    (function step() {
+      if (round !== 0 || busy) { idleRun = false; return; }
+      for (var k = 0; k < 4; k++) { rot[k] = norm(rot[k] + DIRS[k] * IDLE[k]); applyRot(k); }
+      requestAnimationFrame(step);
+    })();
+  }
+
+  function animate(k, idx, spins, dur) {
+    return new Promise(function (resolve) {
+      var start = rot[k], target = -idx * SEG, dir = DIRS[k], diff;
+      if (dir > 0) diff = norm(target - start) + 360 * spins;
+      else diff = -(norm(start - target) + 360 * spins);
+      lastSeg[k] = Math.floor(-start / SEG + 0.5);
+      var t0 = performance.now();
+      function step(t) {
+        var p = Math.min(1, (t - t0) / dur);
+        var e = 1 - Math.pow(1 - p, 4);
+        rot[k] = start + diff * e;
+        applyRot(k);
+        var s = Math.floor(-rot[k] / SEG + 0.5);
+        if (s !== lastSeg[k]) { lastSeg[k] = s; if (k === 0) kickFlap(); }
+        if (p < 1) requestAnimationFrame(step);
+        else { rot[k] = norm(start + diff); applyRot(k); resolve(); }
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  function pickFour() {
+    var picks;
+    if (freshEl.checked) {
+      var fresh = all().filter(function (i) { return !seen[i]; });
+      if (fresh.length < 4) {
+        seen = {};
+        fresh = all().filter(function (i) { return prevDraw.indexOf(i) === -1; });
+      }
+      picks = shuffle(fresh).slice(0, 4);
+    } else {
+      picks = shuffle(all()).slice(0, 4);
+    }
+    return picks;
+  }
+
+  function setBusy(b) {
+    busy = b;
+    spinBtn.disabled = b;
+    resetBtn.disabled = b;
+    hubEl.classList.toggle("off", b);
+    if (b) hubEl.classList.remove("invite");
+    var btns = cardsEl.querySelectorAll(".swap");
+    for (var i = 0; i < btns.length; i++) btns[i].disabled = b;
+  }
+
+  function land(k, idx) {
+    current[k] = idx;
+    spinning[k] = false;
+    revealed[idx] = true;
+    document.getElementById("win" + k).classList.add("lit");
+    var popMap = {}; popMap[k] = true;
+    renderCards(popMap); renderLedger();
+  }
+  function finish(n) {
+    svg.classList.remove("spinning");
+    svg.classList.add("flash");
+    setTimeout(function () { svg.classList.remove("flash"); }, 1600);
+    burst(n);
+    setBusy(false);
+    renderCards(); renderLedger();
+  }
+
+  function spinAll() {
+    if (busy) return;
+    var picks = pickFour();
+    prevDraw = picks.slice();
+    picks.forEach(function (i) { seen[i] = true; });
+    round++;
+    setBusy(true);
+    svg.classList.add("spinning");
+    for (var k = 0; k < 4; k++) {
+      spinning[k] = true; current[k] = null;
+      document.getElementById("win" + k).classList.remove("lit");
+    }
+    renderAll();
+    Promise.all(picks.map(function (idx, k) {
+      return animate(k, idx, reduce ? 1 : SPINS[k], reduce ? 500 : DURS[k]).then(function () { land(k, idx); });
+    })).then(function () { finish(120); });
+  }
+
+  function spinOne(k) {
+    if (busy) return;
+    var others = [];
+    for (var j = 0; j < 4; j++) if (j !== k && current[j] !== null) others.push(current[j]);
+    var cands = all().filter(function (i) { return others.indexOf(i) === -1 && i !== current[k]; });
+    if (freshEl.checked) {
+      var fr = cands.filter(function (i) { return !seen[i]; });
+      if (fr.length) cands = fr;
+    }
+    var pick = cands[rand(cands.length)];
+    seen[pick] = true;
+    setBusy(true);
+    svg.classList.add("spinning");
+    spinning[k] = true; current[k] = null;
+    document.getElementById("win" + k).classList.remove("lit");
+    renderAll();
+    animate(k, pick, reduce ? 1 : 3, reduce ? 500 : 3000).then(function () {
+      land(k, pick);
+      finish(40);
+    });
+  }
+
+  function resetAll() {
+    if (busy) return;
+    seen = {}; revealed = {}; prevDraw = []; round = 0;
+    current = [null, null, null, null]; spinning = [false, false, false, false];
+    for (var k = 0; k < 4; k++) document.getElementById("win" + k).classList.remove("lit");
+    hubEl.classList.add("invite");
+    renderAll();
+    idleLoop();
+  }
+
+  // จำกัดคะแนนแต่ละช่องไม่ให้เกิน 10 และคำนวณผลรวมอัตโนมัติ
+  var scoreInputs = document.querySelectorAll(".grading-table input[type='number']");
+  function updateTotalScore() {
+    var sum = 0;
+    scoreInputs.forEach(function(input) {
+      var val = parseFloat(input.value);
+      if (isNaN(val)) val = 0;
+      if (val > 10) { val = 10; input.value = 10; }
+      if (val < 0) { val = 0; input.value = 0; }
+      sum += val;
+    });
+    document.getElementById("total_score").textContent = sum;
+  }
+  scoreInputs.forEach(function(input) {
+    input.addEventListener("input", updateTotalScore);
+  });
+
+  cardsEl.addEventListener("click", function (e) {
+    var b = e.target.closest(".swap");
+    if (b && !busy) spinOne(parseInt(b.getAttribute("data-k"), 10));
+  });
+  spinBtn.addEventListener("click", spinAll);
+  resetBtn.addEventListener("click", resetAll);
+
+  buildWheel();
+  buildLegend();
+  buildMap();
+  renderAll();
+  idleLoop();
+})();
+</script>
+
+</body>
+</html>
